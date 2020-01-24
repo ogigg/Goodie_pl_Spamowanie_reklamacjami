@@ -15,9 +15,9 @@ async function getOrders(page){  //Funkcja zwraca zamowienia na danej stronie
     return data.components;
 }
 
-function isDateLongerThan60Days(date){ //Funkcja sprawdza czy data ma ponad 60 dni, jeśli tak, zwraca true
+function isDateLongerThan60Days(date){
     if(Date.now()-Date.parse(date)>5184000000){ //5184000000 - 60 dni w milisekundach
-        console.log("Ponad 60 dni!")
+        // console.log("Ponad 60 dni!")
         return true;
     }
     else{
@@ -26,16 +26,16 @@ function isDateLongerThan60Days(date){ //Funkcja sprawdza czy data ma ponad 60 d
 
 }
 
-function createClaim(order,token){ //Funkcja wysyła zapytanie z reklamacją
+function createClaim(order,token){
     let data = {
         complaintType: 2,
         transactionId: order.id,
-        brandId: "ca9f9961-0ecb-4a73-b3ec-db51226daeec",
+        brandId: "ca9f9961-0ecb-4a73-b3ec-db51226daeec", //aliexpress
         orderId: order.orderId,
         cashbackAmount: order.returnedAmountValue,
         purchaseAmount: order.purchaseAmountValue,
         transactionDate: null,
-        description: "Dzien dobry, testuje API i skarze sie ze nie dostalem cashbacku za zamowienie sprzed pol roku :<" //w orginale null
+        description: "Dzien dobry, testuje API i skarze sie ze nie dostalem cashbacku za zamowienie sprzed pol roku :<"
     }
 
     fetch("https://goodie.pl/cashback/CreateClaim",
@@ -53,9 +53,9 @@ function createClaim(order,token){ //Funkcja wysyła zapytanie z reklamacją
 }
 
 function getToken(){ //Pobieranie tokenu ze scriptu z HTMLa
-    let scripts = document.getElementsByTagName("script"); //Pobranie wszystkich scriptów z HTMLa strony
+    let scripts = document.getElementsByTagName("script");
     for(const script of scripts){
-        try{ //Próba wybrania tego scriptu który zawiera token
+        try{
                 var tokenScript = script.outerHTML;
                 var regExPattern =  /"ajaxAction":"\/cashback\/CreateClaim","ajaxMethod":1,"initialData":false,"requestValidationToken"/;
                 var startPosition = regExPattern.exec(tokenScript).index;
@@ -72,14 +72,18 @@ function getToken(){ //Pobieranie tokenu ze scriptu z HTMLa
 
 async function main(){
     let token = getToken()
-    let page = await getPagesCount();
-    for(let i = 0; i<20; i++){
-        let listOfOrders = await getOrders(page-i);
+    let lastPage = await getPagesCount();
+    for(let i = 0; i<35; i++){
+        let listOfOrders = await getOrders(lastPage-i);
+        console.log(listOfOrders)
         listOfOrders.forEach(order => {
             if(isDateLongerThan60Days(order.date)){
-                createClaim(order,token);
+                if(order.canCreateComplaint){ //Sprawdza czy reklamacja nie została już złożona
+                    createClaim(order,token);
+                }
             }
         });
     }
 }
 main();
+
